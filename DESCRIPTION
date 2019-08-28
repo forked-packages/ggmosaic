@@ -1,6 +1,6 @@
 Package: ggmosaic
 Title: Mosaic Plots in the 'ggplot2' Framework
-Version: 0.2.1
+Version: 0.2.2
 Authors@R: 
     c(person(given = "Haley",
              family = "Jeppson",
@@ -37,7 +37,7 @@ Imports:
 Suggests:
     gridExtra,
     knitr,
-    NHANES,
+    patchwork,
     rmarkdown,
 VignetteBuilder: 
     knitr

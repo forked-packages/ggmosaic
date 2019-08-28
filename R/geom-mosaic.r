@@ -1,6 +1,5 @@
 #' Mosaic plots.
 #'
-#' @export
 #'
 #' @description
 #' A mosaic plot is a convenient graphical summary of the conditional distributions
@@ -18,6 +17,9 @@
 #' @param offset Set the space between the first spine
 #' @param na.rm If \code{FALSE} (the default), removes missing values with a warning. If \code{TRUE} silently removes missing values.
 #' @param ... other arguments passed on to \code{layer}. These are often aesthetics, used to set an aesthetic to a fixed value, like \code{color = 'red'} or \code{size = 3}. They may also be parameters to the paired geom/stat.
+#'
+#' @export
+#'
 #' @examples
 #'
 #' data(Titanic)
@@ -91,67 +93,9 @@
 
 geom_mosaic <- function(mapping = NULL, data = NULL, stat = "mosaic",
                         position = "identity", na.rm = FALSE,  divider = mosaic(), offset = 0.01,
-                        show.legend = NA, inherit.aes = FALSE, ...)
+                        show.legend = NA, inherit.aes = TRUE, ...)
 {
-  if (!is.null(mapping$y)) {
-    stop("stat_mosaic() must not be used with a y aesthetic.", call. = FALSE)
-  } else mapping$y <- structure(1L, class = "productlist")
-
-  #  browser()
-
-  aes_x <- mapping$x
-  if (!is.null(aes_x)) {
-    aes_x <- rlang::eval_tidy(mapping$x)
-    var_x <- paste0("x__", as.character(aes_x))
-  }
-
-  aes_fill <- mapping$fill
-  var_fill <- ""
-  if (!is.null(aes_fill)) {
-    aes_fill <- rlang::quo_text(mapping$fill)
-    var_fill <- paste0("x__fill__", aes_fill)
-    if (aes_fill %in% as.character(aes_x)) {
-      idx <- which(aes_x == aes_fill)
-      var_x[idx] <- var_fill
-    } else {
-      mapping[[var_fill]] <- mapping$fill
-    }
-  }
-
-  aes_alpha <- mapping$alpha
-  var_alpha <- ""
-  if (!is.null(aes_alpha)) {
-    aes_alpha <- rlang::quo_text(mapping$alpha)
-    var_alpha <- paste0("x__alpha__", aes_alpha)
-    if (aes_alpha %in% as.character(aes_x)) {
-      idx <- which(aes_x == aes_alpha)
-      var_x[idx] <- var_alpha
-    } else {
-      mapping[[var_alpha]] <- mapping$alpha
-    }
-  }
-
-
-  #  aes_x <- mapping$x
-  if (!is.null(aes_x)) {
-    mapping$x <- structure(1L, class = "productlist")
-
-    for (i in seq_along(var_x)) {
-      mapping[[var_x[i]]] <- aes_x[[i]]
-    }
-  }
-
-
-  aes_conds <- mapping$conds
-  if (!is.null(aes_conds)) {
-    aes_conds <- rlang::eval_tidy(mapping$conds)
-    mapping$conds <- structure(1L, class = "productlist")
-    var_conds <- paste0("conds", seq_along(aes_conds), "__", as.character(aes_conds))
-    for (i in seq_along(var_conds)) {
-      mapping[[var_conds[i]]] <- aes_conds[[i]]
-    }
-  }
-  ggplot2::layer(
+  ll <- ggplot2::layer(
     data = data,
     mapping = mapping,
     stat = stat,
@@ -159,7 +103,7 @@ geom_mosaic <- function(mapping = NULL, data = NULL, stat = "mosaic",
     position = position,
     show.legend = show.legend,
     check.aes = FALSE,
-    inherit.aes = FALSE, # only FALSE to turn the warning off
+    inherit.aes = TRUE, # only FALSE to turn the warning off
     params = list(
       na.rm = na.rm,
       divider = divider,
@@ -167,9 +111,19 @@ geom_mosaic <- function(mapping = NULL, data = NULL, stat = "mosaic",
       ...
     )
   )
+
+  ll$compute_aesthetics_og <- ll$compute_aesthetics
+  ll$compute_aesthetics <- compute_aesthetics_mosaic
+  ll$setup_layer <- setup_layer_mosaic
+
+  ll
 }
 
+#' @rdname geom_mosaic
+#' @format NULL
+#' @usage NULL
 #' @importFrom grid grobTree
+#' @export
 GeomMosaic <- ggplot2::ggproto(
   "GeomMosaic", ggplot2::Geom,
   setup_data = function(data, params) {

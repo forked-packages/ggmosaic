@@ -20,6 +20,7 @@ parse_product_formula <- getFromNamespace("parse_product_formula", "productplots
 #' ggplot(data=titanic) +
 #'   geom_mosaic(aes(weight=Freq, x=product(Survived, Class), fill=Survived))
 product <- function(...) {
+  # exprs gives you back exactly what you gave it
   rlang::exprs(...)
 }
 
@@ -37,62 +38,6 @@ stat_mosaic <- function(mapping = NULL, data = NULL, geom = "mosaic",
                         position = "identity", na.rm = FALSE,  divider = mosaic(),
                         show.legend = NA, inherit.aes = TRUE, offset = 0.01, ...)
 {
-  if (!is.null(mapping$y)) {
-    stop("stat_mosaic() must not be used with a y aesthetic.", call. = FALSE)
-  } else mapping$y <- structure(1L, class = "productlist")
-
-  aes_x <- mapping$x
-  if (!is.null(aes_x)) {
-    aes_x <- rlang::eval_tidy(mapping$x)
-    var_x <- paste0("x__", as.character(aes_x))
-  }
-
-  aes_fill <- mapping$fill
-  var_fill <- ""
-  if (!is.null(aes_fill)) {
-    aes_fill <- rlang::quo_text(mapping$fill)
-    var_fill <- paste0("x__fill__", aes_fill)
-    if (aes_fill %in% as.character(aes_x)) {
-      idx <- which(aes_x == aes_fill)
-      var_x[idx] <- var_fill
-    } else {
-      mapping[[var_fill]] <- mapping$fill
-    }
-  }
-
-  aes_alpha <- mapping$alpha
-  var_alpha <- ""
-  if (!is.null(aes_alpha)) {
-    aes_alpha <- rlang::quo_text(mapping$alpha)
-    var_alpha <- paste0("x__alpha__", aes_alpha)
-    if (aes_alpha %in% as.character(aes_x)) {
-      idx <- which(aes_x == aes_alpha)
-      var_x[idx] <- var_alpha
-    } else {
-      mapping[[var_alpha]] <- mapping$alpha
-    }
-  }
-
-
-  #  aes_x <- mapping$x
-  if (!is.null(aes_x)) {
-    mapping$x <- structure(1L, class = "productlist")
-
-    for (i in seq_along(var_x)) {
-      mapping[[var_x[i]]] <- aes_x[[i]]
-    }
-  }
-
-
-  aes_conds <- mapping$conds
-  if (!is.null(aes_conds)) {
-    aes_conds <- rlang::eval_tidy(mapping$conds)
-    mapping$conds <- structure(1L, class = "productlist")
-    var_conds <- paste0("conds", seq_along(aes_conds), "__", as.character(aes_conds))
-    for (i in seq_along(var_conds)) {
-      mapping[[var_conds[i]]] <- aes_conds[[i]]
-    }
-  }
   ggplot2::layer(
     data = data,
     mapping = mapping,
@@ -126,32 +71,23 @@ StatMosaic <- ggplot2::ggproto(
   setup_params = function(data, params) {
     #cat("setup_params from StatMosaic\n")
     #browser()
-    # if (!is.null(data$y)) {
-    #   stop("stat_mosaic() must not be used with a y aesthetic.", call. = FALSE)
-    # }
     params
   },
 
   setup_data = function(data, params) {
     #cat("setup_data from StatMosaic\n")
     #browser()
-
     data
   },
 
   compute_panel = function(self, data, scales, na.rm=FALSE, divider, offset) {
     #cat("compute_panel from StatMosaic\n")
- #   browser()
-
-#    vars <- names(data)[grep("x[0-9]+__", names(data))]
+    #browser()
     vars <- names(data)[grep("x__", names(data))]
     conds <- names(data)[grep("conds[0-9]+__", names(data))]
 
-
     if (length(vars) == 0) formula <- "1"
     else formula <-  paste(vars, collapse="+")
-
-
 
     formula <- paste("weight~", formula)
 
@@ -162,11 +98,9 @@ StatMosaic <- ggplot2::ggproto(
       df$weight <- 1
     }
 
-
     res <- prodcalc(df, formula=as.formula(formula),
                     divider = divider, cascade=0, scale_max = TRUE,
                     na.rm = na.rm, offset = offset)
-    #browser()
 
     # need to set x variable - I'd rather set the scales here.
     prs <- parse_product_formula(as.formula(formula))
@@ -179,19 +113,10 @@ StatMosaic <- ggplot2::ggproto(
     scx <- productplots::scale_x_product(dflist)
     scy <- productplots::scale_y_product(dflist)
 
-
     # res is data frame that has xmin, xmax, ymin, ymax
     res <- dplyr::rename(res, xmin=l, xmax=r, ymin=b, ymax=t)
     res <- subset(res, level==max(res$level))
 
-    # export the variables with the data - terrible hack
-    # res$x <- list(scale=scx)
-    # if (!is.null(scales$y)) {
-    #   # only set the y scale if it is a product scale, otherwise leave it alone
-    #   if ("ScaleContinuousProduct" %in% class(scales$y))
-    #     res$y <- list(scale=scy)
-    # }
-    # XXXX add label for res
     cols <- c(prs$marg, prs$cond)
 
     if (length(cols) > 1) {
@@ -200,7 +125,6 @@ StatMosaic <- ggplot2::ggproto(
 
       res$label <- df$label
     } else res$label <- as.character(res[,cols])
- #   browser()
 
     res$x <- list(scale=scx)
     if (!is.null(scales$y)) {

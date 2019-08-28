@@ -21,8 +21,7 @@ knitr::opts_chunk$set(fig.width = 6,
 
 ```{r pkgs, echo=FALSE, message=FALSE}
 library(ggmosaic)
-library(gridExtra)
-library(grid)
+library(patchwork)
 ```
 
 ```{r data, echo=FALSE, message=FALSE}
@@ -31,58 +30,8 @@ my_pal <- c("#D43F3AFF","#EEA236FF", "#5CB85CFF", "#46B8DAFF", "#357EBDFF", "#96
 
 scale_fill_discrete <- function(...) scale_fill_manual(..., values = my_pal)
 
-# create theme
-theme_mosaic <- function (base_size = 12, base_family = "Helvetica") { 
-  theme_gray() +
-    theme(
-      rect = element_rect(fill = NA, linetype = 0, colour = NA, size = base_size/22), 
-      text = element_text(family = base_family, face = "plain", color = "black", size = base_size, hjust = 0.5, vjust = 0.5, angle = 0, lineheight = 0.9, margin = margin(), debug = FALSE),
-      panel.grid.major.y = element_line(colour = "#D8D8D8"), 
-      panel.grid.minor.y = element_blank(), 
-      panel.grid.major.x = element_blank(), 
-      panel.grid.minor.x = element_blank(), 
-      panel.border = element_blank(), 
-      panel.background = element_blank(), 
-      legend.position = "right", 
-      legend.key = element_rect(fill = "#FFFFFF00"),
-      
-      axis.title = element_text(size = rel(.8)), 
-      axis.text = element_text(size = rel(.6)),
-      legend.text = element_text(size = rel(.7)),
-      legend.title = element_text(size = rel(.8)),
-      plot.title = element_text(size = rel(.8)),
-      plot.subtitle = element_text(size = rel(.8)),
-      legend.key.size =    unit(.8, "lines")
-    )
-}
-
 # set theme
 theme_set(theme_mosaic())
-
-grid_arrange_shared_legend <- function(..., ncol = length(list(...)), nrow = 1, position = c("bottom", "right")) {
-  
-  plots <- list(...)
-  position <- match.arg(position)
-  g <- ggplotGrob(plots[[1]] + theme(legend.position = position))$grobs
-  legend <- g[[which(sapply(g, function(x) x$name) == "guide-box")]]
-  lheight <- sum(legend$height)
-  lwidth <- sum(legend$width)
-  gl <- lapply(plots, function(x) x + theme(legend.position="none"))
-  gl <- c(gl, ncol = ncol, nrow = nrow)
-  
-  combined <- switch(position,
-                     "bottom" = arrangeGrob(do.call(arrangeGrob, gl),
-                                            legend,
-                                            ncol = 1,
-                                            heights = unit.c(unit(1, "npc") - lheight, lheight)),
-                     "right" = arrangeGrob(do.call(arrangeGrob, gl),
-                                           legend,
-                                           ncol = 2,
-                                           widths = unit.c(unit(1, "npc") - lwidth, lwidth)))
-  grid.newpage()
-  grid.draw(combined)
-  
-}
 ```
 
 # Introduction to `ggmosaic`  
@@ -193,13 +142,12 @@ ggplot(data = fly) +
 
 ```{r order-b, message=FALSE, fig.width = 7, fig.height = 2.4, fig.align='center'}
 order1 <- ggplot(data = fly) +
-  geom_mosaic(aes(x = product(DoYouRecline, RudeToRecline), fill=DoYouRecline), na.rm=TRUE)
+  geom_mosaic(aes(x = product(DoYouRecline, RudeToRecline), fill=DoYouRecline), na.rm=TRUE) + theme(legend.position = "none")
 
 order2 <- ggplot(data = fly) +
-  geom_mosaic(aes(x = product(RudeToRecline, DoYouRecline), fill=DoYouRecline), na.rm=TRUE) + 
-  coord_flip()
+  geom_mosaic(aes(x = product(RudeToRecline, DoYouRecline), fill=DoYouRecline), na.rm=TRUE, divider = c("hspine", "vspine")) + theme(legend.position = "none")
 
-grid_arrange_shared_legend(order1, order2, ncol = 2, nrow = 1, position = "right")
+order1 + order2
 ```
 
 
@@ -225,22 +173,25 @@ Four options available for each partion:
 ```{r partitions, message=FALSE, fig.width = 7, fig.height = 4.8, fig.align='center'}
 hbar <- ggplot(data = fly) +
   geom_mosaic(aes(x = product(RudeToRecline), fill=RudeToRecline), divider="hbar", na.rm=TRUE) + 
-  labs(title='divider = "hbar"') 
+  labs(title='divider = "hbar"') + 
+  theme(legend.position = "none")
 
 hspine <- ggplot(data = fly) +
   geom_mosaic(aes(x = product(RudeToRecline), fill=RudeToRecline),  divider="hspine", na.rm=TRUE) + 
-  labs(x=" ", title='divider = "hspine"') 
+  labs(x=" ", title='divider = "hspine"') + 
+  theme(legend.position = "none")
 
 vbar <- ggplot(data = fly) +
   geom_mosaic(aes(x = product(RudeToRecline), fill=RudeToRecline), divider="vbar", na.rm=TRUE) + 
-  labs(y=" ", x="", title='divider = "vbar"') 
+  labs(y=" ", x="", title='divider = "vbar"') + 
+  theme(legend.position = "none") 
  
 vspine <- ggplot(data = fly) +
   geom_mosaic(aes(x = product(RudeToRecline), fill=RudeToRecline), divider="vspine", na.rm=TRUE) + 
-  labs(y=" ", x="", title='divider = "vspine"') 
+  labs(y=" ", x="", title='divider = "vspine"') + 
+  theme(legend.position = "none") 
 
-grid_arrange_shared_legend(hbar, hspine, vbar, vspine, ncol = 2, nrow = 2, position = "bottom")
-
+hbar + hspine + vbar + vspine + plot_layout(ncol = 2)
 ```
 
 ## Partitioning with one or more variables
@@ -265,15 +216,15 @@ h_mosaic <- ggplot(data = fly) +
 
 v_mosaic <- ggplot(data = fly) +
   geom_mosaic(aes(x = product(DoYouRecline, RudeToRecline, Gender), fill=DoYouRecline), na.rm=T, divider=mosaic("v")) +
-  theme(axis.text.x=element_blank()) + 
+  theme(axis.text.x=element_blank(), legend.position="none") + 
   labs(x=" ", title='divider= mosaic("v")')
 
 doubledecker <- ggplot(data = fly) +
   geom_mosaic(aes(x = product(DoYouRecline, RudeToRecline, Gender), fill=DoYouRecline), na.rm=T, divider=ddecker()) +
-  theme(axis.text.x=element_blank()) +
+  theme(axis.text.x=element_blank(), legend.position="none") +
   labs(x=" ", title='divider= ddecker()')
 
-grid_arrange_shared_legend(h_mosaic, v_mosaic, doubledecker, ncol = 2, nrow = 2, position = "bottom")
+h_mosaic + v_mosaic + doubledecker + plot_layout(ncol = 2)
 ```
 
 
@@ -281,25 +232,25 @@ grid_arrange_shared_legend(h_mosaic, v_mosaic, doubledecker, ncol = 2, nrow = 2,
 ```{r mosaic-d, message=FALSE, fig.width = 7, fig.height = 5.5, fig.align='center'}
 mosaic4 <-  ggplot(data = fly) +
   geom_mosaic(aes(x = product(DoYouRecline, RudeToRecline, Gender), fill=DoYouRecline), na.rm=T, divider=c("vspine", "vspine", "hbar")) +
-  theme(axis.text.y=element_blank()) +
+  theme(axis.text.y=element_blank(), legend.position="none") +
   labs(x=" ", title='divider= c("vspine", "vspine", "hbar")') 
 
 mosaic5 <-  ggplot(data = fly) +
   geom_mosaic(aes(x = product(DoYouRecline, RudeToRecline, Gender), fill=DoYouRecline), na.rm=T, divider=c("hbar", "vspine", "hbar")) +
-  theme(axis.text.x=element_blank()) +
+  theme(axis.text.x=element_blank(), legend.position="none") +
   labs(x=" ", title='divider= c("hbar", "vspine", "hbar")')
 
 mosaic6 <-  ggplot(data = fly) +
   geom_mosaic(aes(x = product(DoYouRecline, RudeToRecline, Gender), fill=DoYouRecline), na.rm=T, divider=c("hspine", "hspine", "hspine")) +
-  theme(axis.text.x=element_blank()) +
+  theme(axis.text.x=element_blank(), legend.position="none") +
   labs(x=" ", title='divider= c("hspine", "hspine", "hspine")')
 
 mosaic7 <-  ggplot(data = fly) +
   geom_mosaic(aes(x = product(DoYouRecline, RudeToRecline, Gender), fill=DoYouRecline), na.rm=T, divider=c("vspine", "vspine", "vspine")) +
-  theme(axis.text.y=element_blank()) +
+  theme(axis.text.y=element_blank(), legend.position="none") +
   labs(x=" ", title='divider= c("vspine", "vspine", "vspine")')
 
-grid_arrange_shared_legend(mosaic4, mosaic5, mosaic6, mosaic7, ncol = 2, nrow = 2, position="bottom")
+mosaic4 + mosaic5 + mosaic6 + mosaic7 + plot_layout(ncol = 2)
 ```
 
   
@@ -320,24 +271,24 @@ offset1 <- ggplot(data = fly) +
   geom_mosaic(aes(x = product(FlightFreq, Region), fill=FlightFreq), na.rm=TRUE) + 
   labs(x="Region", y=" ",  title=" offset = 0.01") +
   scale_y_productlist(name = "") +
-  theme(axis.text.y=element_blank(),
-        axis.text.x = element_text(angle = 90))
+  theme(axis.text=element_blank(),
+        legend.position="none")
 
 offset0 <- ggplot(data = fly) +
   geom_mosaic(aes(x = product(FlightFreq, Region), fill=FlightFreq), na.rm=TRUE, offset = 0) + 
   labs(x="Region", y=" ",  title=" offset = 0") +
   scale_y_productlist(name = "") +
-  theme(axis.text.y=element_blank(),
-        axis.text.x = element_text(angle = 90))
+  theme(axis.text=element_blank(),
+        legend.position="none")
 
 offset2 <- ggplot(data = fly) +
   geom_mosaic(aes(x = product(FlightFreq, Region), fill=FlightFreq), na.rm=TRUE, offset = 0.02) + 
   labs(x="Region", y=" ",  title=" offset = 0.02") +
   scale_y_productlist(name = "") +
-  theme(axis.text.y = element_blank(),
-        axis.text.x = element_text(angle = 90))
+  theme(axis.text=element_blank(),
+        legend.position="none")
 
-grid_arrange_shared_legend(offset0, offset1, offset2, nrow = 1, ncol =3, position="bottom")
+offset0 + offset1 + offset2 + plot_layout(ncol = 2)
 ```
 
 
@@ -351,15 +302,17 @@ grid_arrange_shared_legend(offset0, offset1, offset2, nrow = 1, ncol =3, positio
 ```{r, message=FALSE, fig.width = 7, fig.height = 2.4, fig.align='center'}
 example1 <- ggplot(data = fly) +
   geom_mosaic(aes(x = product(RudeToRecline), fill=DoYouRecline), na.rm=TRUE) + 
-  labs(x = "Is it rude to recline?", title = "Relabeling does not work")
+  labs(x = "Is it rude to recline?", title = "Relabeling does not work") +
+  theme(legend.position = "none")
 
 example2 <- ggplot(data = fly) +
   geom_mosaic(aes(x = product(RudeToRecline), fill=DoYouRecline), na.rm=TRUE) + 
   labs(title = "Relabeling works") +
   scale_x_productlist(name = "Is it rude to recline?") +
-  scale_y_productlist(name = "Do you recline?")
+  scale_y_productlist(name = "Do you recline?") +
+  theme(legend.position = "none")
 
-grid_arrange_shared_legend(example1, example2, nrow = 1, ncol = 2, position="right")
+example1 + example2 
 ```
 
 
