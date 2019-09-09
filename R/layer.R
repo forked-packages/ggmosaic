@@ -9,6 +9,10 @@ compute_aesthetics_mosaic <- function(self, data, plot) {
   if (!is.null(plot$mapping$x))
     plot$mapping <- plot$mapping[-grep("x", names(plot$mapping))]
 
+  if (!is.null(plot$mapping$y))
+    plot$mapping <- plot$mapping[-grep("y", names(plot$mapping))]
+
+
   self$compute_aesthetics_og(data, plot)
 }
 
@@ -16,9 +20,10 @@ compute_aesthetics_mosaic <- function(self, data, plot) {
 #' @noRd
 setup_layer_mosaic <- function(self, data, plot) {
   #browser()
-  if (!is.null(self$mapping$y) | !is.null(plot$mapping$y)) {
-    stop("stat_mosaic() must not be used with a y aesthetic.", call. = FALSE)
-  } else self$mapping$y <- structure(1L, class = "productlist")
+  #if (!is.null(self$mapping$y) | !is.null(plot$mapping$y)) {
+  if (!is.null(plot$mapping$y)) {
+    warning("stat_mosaic() must not be used with a y aesthetic.", call. = FALSE)
+  } else self$mapping$y <- plot$mapping$y <- structure(1L, class = "productlist")
 
   # get x mappings from plot or self if x mapping is not in plot
   aes_x <- plot$mapping$x %||% self$mapping$x
